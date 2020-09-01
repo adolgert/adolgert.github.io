@@ -2,6 +2,7 @@
 layout: post
 author: adolgert
 title: Finite state machines as a design pattern for scientific code
+keywords: finite state machine, design patterns, scientific software
 usemathjax: true
 ---
 
