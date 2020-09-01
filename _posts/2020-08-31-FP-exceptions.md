@@ -7,6 +7,8 @@ description: Unit testing for divide-by-zero behavior.
 usemathjax: true
 ---
 
+Acceptance testing for divide-by-zero behavior.
+
 # Floating point isn't the real numbers
 
 If you're used to writing scientific code in a language, then

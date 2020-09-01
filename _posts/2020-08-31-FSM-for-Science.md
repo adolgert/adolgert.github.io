@@ -7,6 +7,8 @@ keywords: finite state machine, design patterns, scientific software
 usemathjax: true
 ---
 
+The mathematical definition of a finite state machine is a template for a design.
+
 # Introduction
 
 We write code all the time that does some sort of time step.
