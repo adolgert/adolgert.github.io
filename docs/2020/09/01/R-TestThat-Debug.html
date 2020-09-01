@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Modifying testthat Unit Tests for Debugging | Computing Kitchen</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Modifying testthat Unit Tests for Debugging" />
+<meta name="author" content="adolgert" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="How to call testthat in order to debug the function" />
+<meta property="og:description" content="How to call testthat in order to debug the function" />
+<link rel="canonical" href="computingkitchen.com/2020/09/01/R-TestThat-Debug.html" />
+<meta property="og:url" content="computingkitchen.com/2020/09/01/R-TestThat-Debug.html" />
+<meta property="og:site_name" content="Computing Kitchen" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-09-01T00:00:00-07:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"Modifying testthat Unit Tests for Debugging","dateModified":"2020-09-01T00:00:00-07:00","datePublished":"2020-09-01T00:00:00-07:00","mainEntityOfPage":{"@type":"WebPage","@id":"computingkitchen.com/2020/09/01/R-TestThat-Debug.html"},"url":"computingkitchen.com/2020/09/01/R-TestThat-Debug.html","author":{"@type":"Person","name":"adolgert"},"description":"How to call testthat in order to debug the function","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=82ee03d94b1d23cc22dbad5d10c0548de329b4ca">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/adolgert/adolgert.github.io">View On GitHub</a></li>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Computing Kitchen</h1>
+          <p>Everyday computational science</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/adolgert">adolgert</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        
+
+<h1>Modifying testthat Unit Tests for Debugging</h1>
+<p>01 Sep 2020 - adolgert</p>
+
+<p>How to call testthat under RStudio in order to debug the function.</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>When I see an error in a unit test, and I need to figure
+out how to fix it, I’d like to have all of my tools
+available. There is no reason to be stuck with print-statement
+debugging.</p>
+
+<p>This entry shows two techniques: how to add convenience
+functions for calling debuggers and how to use editor
+breakpoints to trace unit tests.</p>
+
+<h2 id="convenience-functions">Convenience functions</h2>
+
+<p>My projects always have a directory structure that places
+tests for the source file <code class="language-plaintext highlighter-rouge">R/filename.R</code> under <code class="language-plaintext highlighter-rouge">tests/testthat/test-filename.R</code>. I make it easier to test a single file
+by making functions that take <code class="language-plaintext highlighter-rouge">filename.R</code> as the argument.</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Place in .Rprofile</span><span class="w">
+</span><span class="n">test_file_path</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">test_file</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">paste</span><span class="p">(</span><span class="s2">"test"</span><span class="p">,</span><span class="w"> </span><span class="n">filepath</span><span class="p">,</span><span class="w"> </span><span class="n">sep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"-"</span><span class="p">)</span><span class="w">
+  </span><span class="n">rprojroot</span><span class="o">::</span><span class="n">find_package_root_file</span><span class="p">(</span><span class="s2">"tests"</span><span class="p">,</span><span class="w"> </span><span class="s2">"testthat"</span><span class="p">,</span><span class="w"> </span><span class="n">test_file</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">test_progress</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span><span class="w"> </span><span class="n">reporter</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">testthat</span><span class="o">::</span><span class="n">test_file</span><span class="p">(</span><span class="w">
+  	</span><span class="n">test_file_path</span><span class="p">(</span><span class="n">filepath</span><span class="p">),</span><span class="w">
+  	</span><span class="n">reporter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reporter</span><span class="w">
+  </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="c1"># This turns off Hadley's weird unit test messages.</span><span class="w">
+</span><span class="n">testf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">test_progress</span><span class="p">(</span><span class="w">
+    </span><span class="n">filepath</span><span class="p">,</span><span class="w"> </span><span class="n">testthat</span><span class="o">::</span><span class="n">ProgressReporter</span><span class="o">$</span><span class="n">new</span><span class="p">(</span><span class="n">show_praise</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+	</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="c1"># Drop into debug if the test fails.</span><span class="w">
+</span><span class="n">testd</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">test_progress</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span><span class="w"> </span><span class="n">testthat</span><span class="o">::</span><span class="n">DebugReporter</span><span class="o">$</span><span class="n">new</span><span class="p">())</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>They also turn off the infantilizing “praise” option.</p>
+
+<h2 id="debugging-a-unit-test-interactively">Debugging a unit test interactively</h2>
+
+<p>The code above also shows one way to look at stack frames
+when a test fails. It calls <code class="language-plaintext highlighter-rouge">testthat::test_file</code> with
+the <code class="language-plaintext highlighter-rouge">DebugReporter</code>. This will stop at the failure and
+show variables that are defined in a given stack frame.
+That’s helpful, but it isn’t as helpful as being able to
+use an interactive debugger.</p>
+
+<p>There are two ways to invoke an interactive debugger from
+a unit test. One is to insert <code class="language-plaintext highlighter-rouge">browser()</code> commands into the
+source code. You will need to execute the function again, or
+rebuild the source, in order for the <code class="language-plaintext highlighter-rouge">browser()</code> command to
+be invoked. The trouble with this is that you don’t want to
+leave <code class="language-plaintext highlighter-rouge">browser()</code> commands in the code by accident, and
+accidents will happen.</p>
+
+<p>I’d like to use <a href="https://support.rstudio.com/hc/en-us/articles/205612627-Debugging-with-RStudio#stopping-on-a-line">editor breakpoints</a> instead.
+The <code class="language-plaintext highlighter-rouge">testthat</code> library <a href="https://github.com/r-lib/testthat/issues/116">won’t be able to use editor
+breakpoints</a> because it usually starts a separate session,
+outside RStudio, to run its tests.
+If we’re willing to relax our requirement that unit tests
+run in a pristine environment, then we can run those tests
+ourselves.</p>
+
+<p>In order to run the unit tests ourselves, we need to read
+the file with unit tests and run those tests in the local
+environment. A quick way to do this</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">test_file_trace</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">env</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new.env</span><span class="p">()</span><span class="w">
+
+  </span><span class="n">test_that</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">desc</span><span class="p">,</span><span class="w"> </span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">eval</span><span class="p">(</span><span class="nf">substitute</span><span class="p">(</span><span class="n">code</span><span class="p">),</span><span class="w"> </span><span class="n">env</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="n">env</span><span class="o">$</span><span class="n">test_that</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">test_that</span><span class="w">
+  </span><span class="n">source</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="w"> </span><span class="n">env</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>When we want to debug a particular function, we can
+set a breakpoint by left-clicking to the left of
+the line numbers in RStudio.  Then mark the function
+for tracing
+with <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/debug.html">debugonce</a>. Finally run unit tests in that file
+using the code above, <code class="language-plaintext highlighter-rouge">test_file_trace(filename)</code>.
+That gives interactive debugging using the browser.</p>
+
+<p>It’s possible to modify this function further
+so that it picks out tests that match a
+regular expression.</p>
+
+
+
+      </section>
+
+    </div>
+
+    
+  </body>
+</html>
