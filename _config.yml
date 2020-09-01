@@ -1,0 +1,9 @@
+theme: jekyll-theme-midnight
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+title: Computing Kitchen
+description: Everyday computational science
