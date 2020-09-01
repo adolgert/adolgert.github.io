@@ -5,6 +5,9 @@ title: Finite state machines as a design pattern for scientific code
 usemathjax: true
 ---
 
+The mathematical definition of a finite state machine is a template
+for a design pattern for scientific simulation.
+
 # Introduction
 
 We write code all the time that does some sort of time step.
