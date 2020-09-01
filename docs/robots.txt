@@ -1,1 +1,1 @@
-Sitemap: /sitemap.xml
+Sitemap: computingkitchen.com/sitemap.xml

@@ -1,4 +1,80 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-08-31T20:42:33-07:00</updated><id>/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Finite state machines as a design pattern for scientific code</title><link href="/2020/08/31/FSM-for-Science.html" rel="alternate" type="text/html" title="Finite state machines as a design pattern for scientific code" /><published>2020-08-31T00:00:00-07:00</published><updated>2020-08-31T00:00:00-07:00</updated><id>/2020/08/31/FSM-for-Science</id><content type="html" xml:base="/2020/08/31/FSM-for-Science.html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="computingkitchen.com/feed.xml" rel="self" type="application/atom+xml" /><link href="computingkitchen.com/" rel="alternate" type="text/html" /><updated>2020-08-31T22:34:27-07:00</updated><id>computingkitchen.com/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Testing for Floating Point Exceptions</title><link href="computingkitchen.com/2020/08/31/FP-exceptions.html" rel="alternate" type="text/html" title="Testing for Floating Point Exceptions" /><published>2020-08-31T00:00:00-07:00</published><updated>2020-08-31T00:00:00-07:00</updated><id>computingkitchen.com/2020/08/31/FP-exceptions</id><content type="html" xml:base="computingkitchen.com/2020/08/31/FP-exceptions.html">&lt;h1 id=&quot;floating-point-isnt-the-real-numbers&quot;&gt;Floating point isn’t the real numbers&lt;/h1&gt;
+
+&lt;p&gt;If you’re used to writing scientific code in a language, then
+you know the results of these calculations:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;x = sqrt(-2)
+y = 1 / 0
+z = 2^(-50) / 2^10
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;These are all cases where something goes wrong, to a greater
+or lesser extent, and we rely on however our language
+of choice behaves.&lt;/p&gt;
+
+&lt;p&gt;The problem is that not all languages give the same
+answers for these lines of code, and the same language
+can give different answers for different installations
+or operating system settings.&lt;/p&gt;
+
+&lt;h1 id=&quot;floating-point-exceptions&quot;&gt;Floating-point exceptions&lt;/h1&gt;
+
+&lt;p&gt;Those lines of code are examples of three of the five
+kinds of floating-point exceptions. The CPU will flag
+these exceptions when they happen.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;em&gt;Invalid operation&lt;/em&gt;—These include \(\sqrt{-2}\) and
+\(0 / 0\). If the exception is not caught, they result
+in a NaN value.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;em&gt;Division by zero&lt;/em&gt;—These result in either an exception
+or Inf or -Inf.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;em&gt;Overflow&lt;/em&gt;—When an operation results in a number too large to represent, this can result
+either in infinity or the largest representable number, depending on settings.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;em&gt;Underflow&lt;/em&gt;—When an operation results in a number that isn’t zero but is too small to
+represent, it can result in plus or minus zero, or the smallest representable number, or a
+special value called a subnormal.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;em&gt;Inexact&lt;/em&gt;—The result can’t be represented exactly with the ieee standard. For example,
+\(2.0 / 3.0\). This happens a lot.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;An inexact result is hardly unusual, given the binary representation
+of floating point, but it is still possible to catch this as an exception.
+The floating-point standard, IEEE 754, is designed to be configurable (Overton 2001),
+and exceptions raised on the CPU are the first link in a chain.&lt;/p&gt;
+
+&lt;p&gt;When the CPU sets a flag indicating that an exception has
+happened, the operating system has to check for that flag
+and clear it. The operating system then decides whether to
+raise an interrupt.&lt;/p&gt;
+
+&lt;p&gt;Each language, from C++ to Julia, has a runtime that receives
+interrupts from the operating system. That runtime then decides
+whether to generate a language-level exception or whether to
+ignore it.&lt;/p&gt;
+
+&lt;h1 id=&quot;acceptance-testing&quot;&gt;Acceptance testing&lt;/h1&gt;
+
+&lt;p&gt;It used to be important to include tests of floating-point exceptions
+in C++ because settings in the operating system or installation could
+change behavior. I don’t know to what extent languages are
+able to provide stable behavior for divide-by-zero and NaN-generating
+calls, but it seems like a good spot for an acceptance test during
+installation.&lt;/p&gt;
+
+&lt;h1 id=&quot;bibliography&quot;&gt;Bibliography&lt;/h1&gt;
+
+&lt;p&gt;Overton, Michael L. Numerical computing with IEEE floating point arithmetic. Society for Industrial and Applied Mathematics, 2001.&lt;/p&gt;</content><author><name>adolgert</name></author><summary type="html">Floating point isn’t the real numbers</summary></entry><entry><title type="html">Finite state machines as a design pattern for scientific code</title><link href="computingkitchen.com/2020/08/31/FSM-for-Science.html" rel="alternate" type="text/html" title="Finite state machines as a design pattern for scientific code" /><published>2020-08-31T00:00:00-07:00</published><updated>2020-08-31T00:00:00-07:00</updated><id>computingkitchen.com/2020/08/31/FSM-for-Science</id><content type="html" xml:base="computingkitchen.com/2020/08/31/FSM-for-Science.html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;/h1&gt;
 
 &lt;p&gt;We write code all the time that does some sort of time step.
 It could be a custom integration for a particular ordinary differential

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Testing for Floating Point Exceptions | Computing Kitchen</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Testing for Floating Point Exceptions" />
+<meta name="author" content="adolgert" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Unit testing for divide-by-zero behavior." />
+<meta property="og:description" content="Unit testing for divide-by-zero behavior." />
+<link rel="canonical" href="computingkitchen.com/2020/08/31/FP-exceptions.html" />
+<meta property="og:url" content="computingkitchen.com/2020/08/31/FP-exceptions.html" />
+<meta property="og:site_name" content="Computing Kitchen" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-08-31T00:00:00-07:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"Testing for Floating Point Exceptions","dateModified":"2020-08-31T00:00:00-07:00","datePublished":"2020-08-31T00:00:00-07:00","mainEntityOfPage":{"@type":"WebPage","@id":"computingkitchen.com/2020/08/31/FP-exceptions.html"},"url":"computingkitchen.com/2020/08/31/FP-exceptions.html","author":{"@type":"Person","name":"adolgert"},"description":"Unit testing for divide-by-zero behavior.","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=3622b6a57c8167a07ccf3ba6b50a9169112711b3">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/adolgert/adolgert.github.io">View On GitHub</a></li>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Computing Kitchen</h1>
+          <p>Everyday computational science</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/adolgert">adolgert</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        
+<script type="text/javascript" async
+ src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+  </script>
+
+
+<h1>Testing for Floating Point Exceptions</h1>
+<p>31 Aug 2020 - adolgert</p>
+
+<h1 id="floating-point-isnt-the-real-numbers">Floating point isn’t the real numbers</h1>
+
+<p>If you’re used to writing scientific code in a language, then
+you know the results of these calculations:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x = sqrt(-2)
+y = 1 / 0
+z = 2^(-50) / 2^10
+</code></pre></div></div>
+
+<p>These are all cases where something goes wrong, to a greater
+or lesser extent, and we rely on however our language
+of choice behaves.</p>
+
+<p>The problem is that not all languages give the same
+answers for these lines of code, and the same language
+can give different answers for different installations
+or operating system settings.</p>
+
+<h1 id="floating-point-exceptions">Floating-point exceptions</h1>
+
+<p>Those lines of code are examples of three of the five
+kinds of floating-point exceptions. The CPU will flag
+these exceptions when they happen.</p>
+
+<ul>
+  <li>
+    <p><em>Invalid operation</em>—These include \(\sqrt{-2}\) and
+\(0 / 0\). If the exception is not caught, they result
+in a NaN value.</p>
+  </li>
+  <li>
+    <p><em>Division by zero</em>—These result in either an exception
+or Inf or -Inf.</p>
+  </li>
+  <li>
+    <p><em>Overflow</em>—When an operation results in a number too large to represent, this can result
+either in infinity or the largest representable number, depending on settings.</p>
+  </li>
+  <li>
+    <p><em>Underflow</em>—When an operation results in a number that isn’t zero but is too small to
+represent, it can result in plus or minus zero, or the smallest representable number, or a
+special value called a subnormal.</p>
+  </li>
+  <li>
+    <p><em>Inexact</em>—The result can’t be represented exactly with the ieee standard. For example,
+\(2.0 / 3.0\). This happens a lot.</p>
+  </li>
+</ul>
+
+<p>An inexact result is hardly unusual, given the binary representation
+of floating point, but it is still possible to catch this as an exception.
+The floating-point standard, IEEE 754, is designed to be configurable (Overton 2001),
+and exceptions raised on the CPU are the first link in a chain.</p>
+
+<p>When the CPU sets a flag indicating that an exception has
+happened, the operating system has to check for that flag
+and clear it. The operating system then decides whether to
+raise an interrupt.</p>
+
+<p>Each language, from C++ to Julia, has a runtime that receives
+interrupts from the operating system. That runtime then decides
+whether to generate a language-level exception or whether to
+ignore it.</p>
+
+<h1 id="acceptance-testing">Acceptance testing</h1>
+
+<p>It used to be important to include tests of floating-point exceptions
+in C++ because settings in the operating system or installation could
+change behavior. I don’t know to what extent languages are
+able to provide stable behavior for divide-by-zero and NaN-generating
+calls, but it seems like a good spot for an acceptance test during
+installation.</p>
+
+<h1 id="bibliography">Bibliography</h1>
+
+<p>Overton, Michael L. Numerical computing with IEEE floating point arithmetic. Society for Industrial and Applied Mathematics, 2001.</p>
+
+
+
+      </section>
+
+    </div>
+
+    
+  </body>
+</html>
