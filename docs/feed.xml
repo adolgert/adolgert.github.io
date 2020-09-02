@@ -1,4 +1,119 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="computingkitchen.com/feed.xml" rel="self" type="application/atom+xml" /><link href="computingkitchen.com/" rel="alternate" type="text/html" /><updated>2020-09-01T08:38:42-07:00</updated><id>computingkitchen.com/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Modifying testthat Unit Tests for Debugging</title><link href="computingkitchen.com/2020/09/01/R-TestThat-Debug.html" rel="alternate" type="text/html" title="Modifying testthat Unit Tests for Debugging" /><published>2020-09-01T00:00:00-07:00</published><updated>2020-09-01T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/01/R-TestThat-Debug</id><content type="html" xml:base="computingkitchen.com/2020/09/01/R-TestThat-Debug.html">&lt;p&gt;How to call testthat under RStudio in order to debug the function.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="computingkitchen.com/feed.xml" rel="self" type="application/atom+xml" /><link href="computingkitchen.com/" rel="alternate" type="text/html" /><updated>2020-09-02T14:17:23-07:00</updated><id>computingkitchen.com/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Stable Calculation of the Mean Age of Death</title><link href="computingkitchen.com/2020/09/02/Mean-Age.html" rel="alternate" type="text/html" title="Stable Calculation of the Mean Age of Death" /><published>2020-09-02T00:00:00-07:00</published><updated>2020-09-02T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/02/Mean-Age</id><content type="html" xml:base="computingkitchen.com/2020/09/02/Mean-Age.html">&lt;p&gt;Correction for how to calculate the mean age of death.&lt;/p&gt;
+
+&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;For demography, actuarial mathematics, or global health, we
+often count life events that happen to people within some
+time span. Then we analyze the rate at which those events happen.
+The mean age is the average time at which events happen,
+given that they happen within an interval, and weighted
+by the number of individuals remaining.&lt;/p&gt;
+
+&lt;p&gt;The standard calculation for the demographic calculation
+of the mean age, for constant mortality, isn’t numerically
+stable, and this is a note on how to fix it. Rarely does
+the final result of work rely on an assumption that mortality
+is constant across an age interval, unless it chooses small
+age intervals, but the calculation of mean age is often
+used to bootstrap iterative methods or provide a bound
+on results.&lt;/p&gt;
+
+&lt;h2 id=&quot;mean-age-for-constant-mortality-rate-blows-up&quot;&gt;Mean age for constant mortality rate blows up&lt;/h2&gt;
+
+&lt;p&gt;When I say mortality rate, I mean hazard rate for events.
+Sometimes that’s a mortality rate. Sometimes that’s a
+hazard rate for giving birth.&lt;/p&gt;
+
+&lt;p&gt;The mean age for an interval of time that starts at time
+\(x\) and ends at time \(x+n\), for hazard rate \(\lambda(t)\),
+is the ratio of the expected value of the time over a
+normalization by population.&lt;/p&gt;
+
+\[\begin{equation}
+  {}_na_x = \frac{\int_x^{x+n}(a-x)\lambda(a)e^{-\int_x^a\lambda(s)ds}}{\int_x^{x+n}\lambda(a)e^{-\int_x^a\lambda(s)ds}}
+\end{equation}\]
+
+&lt;p&gt;This mean age is the value within the time interval. When we assume that hazard is constant, \(\lambda(t)=m_x\), this simplifies
+considerably to&lt;/p&gt;
+
+\[\begin{equation}
+{}_na_x = \frac{1}{m_x}- \frac{n e^{-m_x n}}{1-e^{-m_x n}}
+\end{equation}\]
+
+&lt;p&gt;The problem is that \(m_x\) can be near or at zero for some
+intervals. The mean age, as \(m_x\) approaches zero, does
+converge to \(n / 2\) mathematically, but floating-point
+calculation shows lots of crazy values as \(m_x\rightarrow 0\).&lt;/p&gt;
+
+&lt;p&gt;The problem is worse when we evaluate draws from
+a distribution of events, because outliers can often be zero.
+I see this even for smaller national populations where mortality
+rates can be low for 10–15 year-olds.
+In particular, there is an iterative method,
+called the graduation method, that fails 
+some percentage of the time (about one percent for national-level data)
+that calculates mortality from mortality rate using this mean
+age equation.&lt;/p&gt;
+
+&lt;h2 id=&quot;rewritten-mean-age-is-stable&quot;&gt;Rewritten mean age is stable&lt;/h2&gt;
+
+&lt;p&gt;Given that the limit of the mean age, as \(m_x\rightarrow 0\),
+converges to \(n/2\), it should be possible to find a
+computation that doesn’t diverge.&lt;/p&gt;
+
+\[\begin{equation}
+{}_na_x = \frac{n}{2}\left(1 - \coth(m_x n)) + \frac{1}{m_x n}\right)
+\end{equation}\]
+
+&lt;p&gt;Writing the equation this way shows that we need to remove
+the infinity from the hyperbolic cotangent. To see this,
+look at the series approximation to the hyperbolic cotangent.&lt;/p&gt;
+
+\[\begin{equation}
+  \coth x = \frac{1}{x} + \frac{x}{3} - \frac{x^3}{45} + \frac{2x^5}{945}+\cdots
+\end{equation}\]
+
+&lt;p&gt;This removal even has a name, the Langevin function.&lt;/p&gt;
+
+\[\begin{equation}
+  L(x) = \coth(x) - \frac{1}{x}
+\end{equation}\]
+
+&lt;p&gt;We can write the mean age of death for constant mortality
+using the Langevin function.&lt;/p&gt;
+
+\[\begin{equation}
+{}_na_x = \frac{n}{2}\left(1 - L(m_x n)\right)
+\end{equation}\]
+
+&lt;h2 id=&quot;approximating-the-langevin-function&quot;&gt;Approximating the Langevin function&lt;/h2&gt;
+
+&lt;p&gt;If your math library doesn’t implement the Langevin
+function, then &lt;em&gt;An Atlas of Functions&lt;/em&gt; has a nice
+approximation, in the form of a continued fraction.&lt;/p&gt;
+
+\[\begin{equation}
+  L(x)\approx (x/3 / (1 + x^2/15 / (1 + x^2/35 / 1 + x^2/63/(1 + x^2/99\cdots))))
+\end{equation}\]
+
+&lt;p&gt;That approximation is really good, but it doesn’t hold
+as \(x\) approaches one, so we would use a uniform interpolation
+between that and the full value. Call the continued
+fraction \(\tilde{L}(x)\). Between a lower value
+\(a=1/1000\) and an upper value \(b=1/100\), interpolate.&lt;/p&gt;
+
+\[\begin{eqnarray}
+w_1 &amp;amp; = &amp;amp; (x - a) / (b - a) \\
+w_2 &amp;amp; = &amp;amp; (b - x) / (b - a) \\
+L(x) &amp;amp; =&amp;amp; w_1 \tilde{L}(x) + w_2 (\coth(x) - \frac{1}{x})
+\end{eqnarray}\]
+
+&lt;p&gt;With the Langevin function in hand, you can throw
+any mortality rate at the mean age equation.&lt;/p&gt;
+
+&lt;h2 id=&quot;bibliography&quot;&gt;Bibliography&lt;/h2&gt;
+
+&lt;p&gt;Spanier, Jerome, and Keith B. Oldham. An Atlas of Functions. New York: Hemisphere publishing corporation, 1987.&lt;/p&gt;</content><author><name>adolgert</name></author><summary type="html">Correction for how to calculate the mean age of death.</summary></entry><entry><title type="html">Modifying testthat Unit Tests for Debugging</title><link href="computingkitchen.com/2020/09/01/R-TestThat-Debug.html" rel="alternate" type="text/html" title="Modifying testthat Unit Tests for Debugging" /><published>2020-09-01T00:00:00-07:00</published><updated>2020-09-01T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/01/R-TestThat-Debug</id><content type="html" xml:base="computingkitchen.com/2020/09/01/R-TestThat-Debug.html">&lt;p&gt;How to call testthat under RStudio in order to debug a unit test.&lt;/p&gt;
 
 &lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
 
@@ -95,7 +210,7 @@ That gives interactive debugging using the browser.&lt;/p&gt;
 
 &lt;p&gt;It’s possible to modify this function further
 so that it picks out tests that match a
-regular expression.&lt;/p&gt;</content><author><name>adolgert</name></author><summary type="html">How to call testthat under RStudio in order to debug the function.</summary></entry><entry><title type="html">Testing for Floating Point Exceptions</title><link href="computingkitchen.com/2020/08/31/FP-exceptions.html" rel="alternate" type="text/html" title="Testing for Floating Point Exceptions" /><published>2020-08-31T00:00:00-07:00</published><updated>2020-08-31T00:00:00-07:00</updated><id>computingkitchen.com/2020/08/31/FP-exceptions</id><content type="html" xml:base="computingkitchen.com/2020/08/31/FP-exceptions.html">&lt;p&gt;Acceptance testing for divide-by-zero behavior.&lt;/p&gt;
+regular expression.&lt;/p&gt;</content><author><name>adolgert</name></author><summary type="html">How to call testthat under RStudio in order to debug a unit test.</summary></entry><entry><title type="html">Testing for Floating Point Exceptions</title><link href="computingkitchen.com/2020/08/31/FP-exceptions.html" rel="alternate" type="text/html" title="Testing for Floating Point Exceptions" /><published>2020-08-31T00:00:00-07:00</published><updated>2020-08-31T00:00:00-07:00</updated><id>computingkitchen.com/2020/08/31/FP-exceptions</id><content type="html" xml:base="computingkitchen.com/2020/08/31/FP-exceptions.html">&lt;p&gt;Acceptance testing for divide-by-zero behavior.&lt;/p&gt;
 
 &lt;h1 id=&quot;floating-point-isnt-the-real-numbers&quot;&gt;Floating point isn’t the real numbers&lt;/h1&gt;
 
