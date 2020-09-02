@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Stable Calculation of the Mean Age of Death | Computing Kitchen</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Stable Calculation of the Mean Age of Death" />
+<meta name="author" content="adolgert" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Correction for how to calculate the mean age of death." />
+<meta property="og:description" content="Correction for how to calculate the mean age of death." />
+<link rel="canonical" href="computingkitchen.com/2020/09/02/Mean-Age.html" />
+<meta property="og:url" content="computingkitchen.com/2020/09/02/Mean-Age.html" />
+<meta property="og:site_name" content="Computing Kitchen" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-09-02T00:00:00-07:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"Stable Calculation of the Mean Age of Death","dateModified":"2020-09-02T00:00:00-07:00","datePublished":"2020-09-02T00:00:00-07:00","mainEntityOfPage":{"@type":"WebPage","@id":"computingkitchen.com/2020/09/02/Mean-Age.html"},"url":"computingkitchen.com/2020/09/02/Mean-Age.html","author":{"@type":"Person","name":"adolgert"},"description":"Correction for how to calculate the mean age of death.","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=db75a1e36732f0ecaff8443b1811eb1e90b7edb9">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="/assets/js/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="/assets/css/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/adolgert/adolgert.github.io">View On GitHub</a></li>
+          
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Computing Kitchen</h1>
+          <p>Everyday computational science</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/adolgert">adolgert</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        
+<script type="text/javascript" async
+ src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+  </script>
+
+
+<h1>Stable Calculation of the Mean Age of Death</h1>
+<p>02 Sep 2020 - adolgert</p>
+
+<p>Correction for how to calculate the mean age of death.</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>For demography, actuarial mathematics, or global health, we
+often count life events that happen to people within some
+time span. Then we analyze the rate at which those events happen.
+The mean age is the average time at which events happen,
+given that they happen within an interval, and weighted
+by the number of individuals remaining.</p>
+
+<p>The standard calculation for the demographic calculation
+of the mean age, for constant mortality, isn’t numerically
+stable, and this is a note on how to fix it. Rarely does
+the final result of work rely on an assumption that mortality
+is constant across an age interval, unless it chooses small
+age intervals, but the calculation of mean age is often
+used to bootstrap iterative methods or provide a bound
+on results.</p>
+
+<h2 id="mean-age-for-constant-mortality-rate-blows-up">Mean age for constant mortality rate blows up</h2>
+
+<p>When I say mortality rate, I mean hazard rate for events.
+Sometimes that’s a mortality rate. Sometimes that’s a
+hazard rate for giving birth.</p>
+
+<p>The mean age for an interval of time that starts at time
+\(x\) and ends at time \(x+n\), for hazard rate \(\lambda(t)\),
+is the ratio of the expected value of the time over a
+normalization by population.</p>
+
+\[\begin{equation}
+  {}_na_x = \frac{\int_x^{x+n}(a-x)\lambda(a)e^{-\int_x^a\lambda(s)ds}}{\int_x^{x+n}\lambda(a)e^{-\int_x^a\lambda(s)ds}}
+\end{equation}\]
+
+<p>This mean age is the value within the time interval. When we assume that hazard is constant, \(\lambda(t)=m_x\), this simplifies
+considerably to</p>
+
+\[\begin{equation}
+{}_na_x = \frac{1}{m_x}- \frac{n e^{-m_x n}}{1-e^{-m_x n}}
+\end{equation}\]
+
+<p>The problem is that \(m_x\) can be near or at zero for some
+intervals. The mean age, as \(m_x\) approaches zero, does
+converge to \(n / 2\) mathematically, but floating-point
+calculation shows lots of crazy values as \(m_x\rightarrow 0\).</p>
+
+<p>The problem is worse when we evaluate draws from
+a distribution of events, because outliers can often be zero.
+I see this even for smaller national populations where mortality
+rates can be low for 10–15 year-olds.
+In particular, there is an iterative method,
+called the graduation method, that fails 
+some percentage of the time (about one percent for national-level data)
+that calculates mortality from mortality rate using this mean
+age equation.</p>
+
+<h2 id="rewritten-mean-age-is-stable">Rewritten mean age is stable</h2>
+
+<p>Given that the limit of the mean age, as \(m_x\rightarrow 0\),
+converges to \(n/2\), it should be possible to find a
+computation that doesn’t diverge.</p>
+
+\[\begin{equation}
+{}_na_x = \frac{n}{2}\left(1 - \coth(m_x n)) + \frac{1}{m_x n}\right)
+\end{equation}\]
+
+<p>Writing the equation this way shows that we need to remove
+the infinity from the hyperbolic cotangent. To see this,
+look at the series approximation to the hyperbolic cotangent.</p>
+
+\[\begin{equation}
+  \coth x = \frac{1}{x} + \frac{x}{3} - \frac{x^3}{45} + \frac{2x^5}{945}+\cdots
+\end{equation}\]
+
+<p>This removal even has a name, the Langevin function.</p>
+
+\[\begin{equation}
+  L(x) = \coth(x) - \frac{1}{x}
+\end{equation}\]
+
+<p>We can write the mean age of death for constant mortality
+using the Langevin function.</p>
+
+\[\begin{equation}
+{}_na_x = \frac{n}{2}\left(1 - L(m_x n)\right)
+\end{equation}\]
+
+<h2 id="approximating-the-langevin-function">Approximating the Langevin function</h2>
+
+<p>If your math library doesn’t implement the Langevin
+function, then <em>An Atlas of Functions</em> has a nice
+approximation, in the form of a continued fraction.</p>
+
+\[\begin{equation}
+  L(x)\approx (x/3 / (1 + x^2/15 / (1 + x^2/35 / 1 + x^2/63/(1 + x^2/99\cdots))))
+\end{equation}\]
+
+<p>That approximation is really good, but it doesn’t hold
+as \(x\) approaches one, so we would use a uniform interpolation
+between that and the full value. Call the continued
+fraction \(\tilde{L}(x)\). Between a lower value
+\(a=1/1000\) and an upper value \(b=1/100\), interpolate.</p>
+
+\[\begin{eqnarray}
+w_1 &amp; = &amp; (x - a) / (b - a) \\
+w_2 &amp; = &amp; (b - x) / (b - a) \\
+L(x) &amp; =&amp; w_1 \tilde{L}(x) + w_2 (\coth(x) - \frac{1}{x})
+\end{eqnarray}\]
+
+<p>With the Langevin function in hand, you can throw
+any mortality rate at the mean age equation.</p>
+
+<h2 id="bibliography">Bibliography</h2>
+
+<p>Spanier, Jerome, and Keith B. Oldham. An Atlas of Functions. New York: Hemisphere publishing corporation, 1987.</p>
+
+
+
+      </section>
+
+    </div>
+
+    
+  </body>
+</html>
