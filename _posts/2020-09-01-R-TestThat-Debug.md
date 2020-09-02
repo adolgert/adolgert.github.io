@@ -2,11 +2,11 @@
 layout: post
 author: adolgert
 title: Modifying testthat Unit Tests for Debugging
-description: How to call testthat in order to debug the function
+description: How to call testthat in order to debug a unit test
 keywords: unit testing, R language, test-driven design, scientific software
 ---
 
-How to call testthat under RStudio in order to debug the function.
+How to call testthat under RStudio in order to debug a unit test.
 
 ## Introduction
 
