@@ -101,8 +101,7 @@ set a breakpoint by left-clicking to the left of
 the line numbers in RStudio.  Then mark the function
 for tracing
 with [debugonce](https://stat.ethz.ch/R-manual/R-devel/library/base/html/debug.html). Finally run unit tests in that file
-using the code above, `test_file_trace(filename)`.
-That gives interactive debugging using the browser.
+using the code above, `test_file_trace(filename).` That gives interactive debugging using the browser.
 
 It's possible to modify this function further
 so that it picks out tests that match a
