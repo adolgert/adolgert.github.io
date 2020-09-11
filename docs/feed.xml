@@ -1,4 +1,88 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="computingkitchen.com/feed.xml" rel="self" type="application/atom+xml" /><link href="computingkitchen.com/" rel="alternate" type="text/html" /><updated>2020-09-08T19:18:21-07:00</updated><id>computingkitchen.com/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Reading Grid Engine QAcct</title><link href="computingkitchen.com/2020/09/08/sge-qacct.html" rel="alternate" type="text/html" title="Reading Grid Engine QAcct" /><published>2020-09-08T00:00:00-07:00</published><updated>2020-09-08T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/08/sge-qacct</id><content type="html" xml:base="computingkitchen.com/2020/09/08/sge-qacct.html">&lt;p&gt;How to read performance characteristics from grid engine output.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="computingkitchen.com/feed.xml" rel="self" type="application/atom+xml" /><link href="computingkitchen.com/" rel="alternate" type="text/html" /><updated>2020-09-10T17:40:55-07:00</updated><id>computingkitchen.com/feed.xml</id><title type="html">Computing Kitchen</title><subtitle>Everyday computational science</subtitle><entry><title type="html">Checkout Testing for Heterogeneous Clusters</title><link href="computingkitchen.com/2020/09/10/checkout-testing.html" rel="alternate" type="text/html" title="Checkout Testing for Heterogeneous Clusters" /><published>2020-09-10T00:00:00-07:00</published><updated>2020-09-10T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/10/checkout-testing</id><content type="html" xml:base="computingkitchen.com/2020/09/10/checkout-testing.html">&lt;p&gt;Checkout testing for code compiled on a different architecture.&lt;/p&gt;
+
+&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;The nodes on this cluster have different architectures because they were bought
+in small batches. When I compile research code on a node, it sometimes won’t run
+on another node. That’s the best case scenario, and the worst is that it will
+run but give wrong results.&lt;/p&gt;
+
+&lt;p&gt;If I compile code with full optimization on one node and run on a much older
+node, it will sometimes stop with a Unix signal, SIGILL.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Illegal instruction
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;That means the compiler inserted a machine code that uses newer chip features,
+and they aren’t present on this chip.&lt;/p&gt;
+
+&lt;p&gt;I would find the oldest machine on the cluster and compile there, but
+chip features aren’t a march of progress. You can look in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/proc/cpuinfo&lt;/code&gt;
+for the flags, which are a rough measure of each chip’s capabilities.
+Here’s an &lt;a href=&quot;https://ark.intel.com/content/www/us/en/ark/products/130409/intel-core-i7-8809g-processor-with-radeon-rx-vega-m-gh-graphics-8m-cache-up-to-4-20-ghz.html&quot;&gt;Intel i7-8809G&lt;/a&gt;, model 158, stepping 9.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov
+pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb
+rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology
+nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2
+ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt
+tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch
+cpuid_fault epb invpcid_single pti ssbd ibrs ibpb stibp tpr_shadow vnmi
+flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms
+invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves
+dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We can avoid the problem by being conservative in our compiler flags.&lt;/p&gt;
+
+&lt;h2 id=&quot;compiling-for-safety&quot;&gt;Compiling for safety&lt;/h2&gt;
+
+&lt;p&gt;It’s tempting to recompile with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-O2&lt;/code&gt;, in case that’s safer. The list of optimizations
+gcc uses at &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-O3&lt;/code&gt; isn’t as dangerous as it used to be, and reducing
+the optimization level isn’t exactly a direct approach to a problem
+with target architecture.&lt;/p&gt;
+
+&lt;p&gt;The most basic target architecture is SSE2, which means choosing both &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-march=SSE2 -mcpu=SSE2&lt;/code&gt;.
+That restricts the compiler to using features from 2000. That seems like it
+would be a bad performance hit. Worse, it would require compiling all the
+components at this level. Our toolchains, these days, are huge, and there’s
+not easy way to specify the architecture for all of them. I’d have
+to go package by package, library by library, looking for how to configure it.&lt;/p&gt;
+
+&lt;h2 id=&quot;silent-faults&quot;&gt;Silent faults&lt;/h2&gt;
+
+&lt;p&gt;The deeper problem is that I’ve seen code that runs on a different architecture
+but gives wrong results. I’ve seen this twice in three years, that someone
+noticed. I don’t have the code as an example.&lt;/p&gt;
+
+&lt;p&gt;I interpret these two events to indicate that the same machine code,
+on two different architectures, can give significantly different results.
+In particular, machine code with one architecture target can run
+on another and give wrong results without raising an exception.&lt;/p&gt;
+
+&lt;h2 id=&quot;checkout-testing&quot;&gt;Checkout testing&lt;/h2&gt;
+
+&lt;p&gt;Checkout testing examines behavior of a system that’s installed in its
+target environment. The term comes from engineering. While acceptance
+testing verifies to a client, or user, that the software works, checkout
+testing applies &lt;em&gt;in place.&lt;/em&gt; I’m starting to use checkout testing
+on this heterogeneous cluster.&lt;/p&gt;
+
+&lt;p&gt;I can’t run the full suite for every job on the cluster. The full
+suite serves many other purposes. It does longer runs for randomized
+fault searches. It has test-driven design user tests. I need to
+pick the checkout test.&lt;/p&gt;
+
+&lt;p&gt;Important architecture changes have advanced multimedia and
+floating-point processing. These affect vectorized mathematical
+loops, so it’s these that I’ll test, in the absence of evidence
+for what causes problems.&lt;/p&gt;
+
+&lt;p&gt;That means I have a new unit testing flag, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--checkout&lt;/code&gt;, that
+exercises code with high math complexity but skips trying all
+possible parameter values. I compile with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-O3&lt;/code&gt;, use the
+native architecture, and compile another version if the checkout
+fails.&lt;/p&gt;</content><author><name>adolgert</name></author><summary type="html">Checkout testing for code compiled on a different architecture.</summary></entry><entry><title type="html">Reading Grid Engine QAcct</title><link href="computingkitchen.com/2020/09/08/sge-qacct.html" rel="alternate" type="text/html" title="Reading Grid Engine QAcct" /><published>2020-09-08T00:00:00-07:00</published><updated>2020-09-08T00:00:00-07:00</updated><id>computingkitchen.com/2020/09/08/sge-qacct</id><content type="html" xml:base="computingkitchen.com/2020/09/08/sge-qacct.html">&lt;p&gt;How to read performance characteristics from grid engine output.&lt;/p&gt;
 
 &lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
 
