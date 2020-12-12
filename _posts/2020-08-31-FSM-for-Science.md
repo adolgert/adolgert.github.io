@@ -188,4 +188,4 @@ y <- fsm_step(fsm, input_process(x))
 
 This design pattern is a central structure for time-stepping
 algorithms. It separates the more pure math of the dynamics
-from translations of intput and output parameters and data.
+from translations of input and output parameters and data.

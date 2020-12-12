@@ -1,5 +1,11 @@
 # Howto work with the blog
 
+May need to install some starter things.
+```bash
+apt install ruby ruby-dev
+bundle install
+```
+
 Start a local webserver.
 ```bash
 bundle exec jekyll build
