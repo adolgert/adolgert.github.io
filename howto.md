@@ -2,7 +2,8 @@
 
 May need to install some starter things.
 ```bash
-apt install ruby ruby-dev
+sudo apt install ruby ruby-dev
+gem install jekyll bundler
 bundle install
 ```
 
